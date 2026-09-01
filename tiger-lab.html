@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>호랑이 디자인 작업대</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #1b1f24;
+        color: #dfe4ea;
+        font-family: "Malgun Gothic", system-ui, sans-serif;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #8fa0b3;
+        letter-spacing: 0.02em;
+      }
+      .note {
+        margin: 0 0 24px;
+        font-size: 0.85rem;
+        color: #8fa0b3;
+        line-height: 1.7;
+      }
+      code {
+        background: #262c33;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.85em;
+      }
+      section {
+        margin-bottom: 26px;
+      }
+      canvas {
+        display: block;
+        border-radius: 10px;
+        max-width: 100%;
+      }
+      .row {
+        display: flex;
+        gap: 22px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .pal {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 8px 18px;
+      }
+      .pal label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        color: #b6c2d0;
+      }
+      .pal input[type="color"] {
+        width: 34px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid #3a434d;
+        border-radius: 5px;
+        background: none;
+        cursor: pointer;
+      }
+      .shape label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.8rem;
+        color: #b6c2d0;
+        margin-bottom: 6px;
+      }
+      .shape label > span:first-child {
+        min-width: 74px;
+      }
+      .shape output {
+        min-width: 42px;
+        font-family: "Courier New", monospace;
+        color: #7fd0f0;
+      }
+      .shape input[type="range"] {
+        width: 150px;
+      }
+      .pal span {
+        min-width: 68px;
+        font-family: "Courier New", monospace;
+      }
+      pre {
+        margin: 12px 0 0;
+        padding: 12px 14px;
+        background: #12161a;
+        border: 1px solid #2c333b;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        line-height: 1.6;
+        overflow-x: auto;
+        color: #a8c8a0;
+      }
+      button {
+        margin-top: 10px;
+        padding: 6px 12px;
+        border: 1px solid #3a434d;
+        border-radius: 6px;
+        background: #262c33;
+        color: #dfe4ea;
+        font-family: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #303841;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>호랑이 디자인 작업대</h1>
+    <p class="note">
+      게임 밖에서 호랑이 그림만 다듬는 곳입니다. 여기 있는
+      <code>drawTiger</code> 함수와 색 상수는 게임의 것과 완전히 같아서, 모양이
+      정해지면 그대로 <code>index.html</code>에 옮기면 됩니다.
+    </p>
+
+    <section>
+      <div class="row">
+        <div>
+          <h2>확대 보기 (6배)</h2>
+          <canvas id="big" width="480" height="400"></canvas>
+        </div>
+        <div>
+          <h2>색상</h2>
+          <div class="pal" id="pal"></div>
+          <h2 style="margin-top:18px">비율</h2>
+          <div class="shape" id="shape"></div>
+          <button id="reset">기본값으로</button>
+          <pre id="code"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>움직이는 미리보기 — 달리다가 주기적으로 점프</h2>
+      <canvas id="anim" width="780" height="200"></canvas>
+    </section>
+
+    <section>
+      <h2>달리기 사이클 + 점프 (게임 실제 크기)</h2>
+      <canvas id="strip1" width="780" height="86"></canvas>
+    </section>
+
+    <section>
+      <h2>같은 것 3배 — 모션 확인용</h2>
+      <canvas id="strip3" width="780" height="220"></canvas>
+    </section>
+
+    <section>
+      <h2>배경 대비 확인 — 게임에서 실제로 깔리는 색들 (실제 크기)</h2>
+      <canvas id="bg" width="780" height="100"></canvas>
+    </section>
+
+    <script>
+      // ============================================================
+      // 그릴 대상 캔버스를 바꿔 끼우기 위한 변수.
+      // 게임에서는 캔버스가 하나뿐이라 고정이지만, 여기서는 여러 개에 그린다.
+      // ============================================================
+      var ctx = null;
+
+      // ============================================================
+      // 색상 (게임의 상수와 동일)
+      // ============================================================
+      var DEFAULTS = {
+        FUR: "#3fa9e0",
+        FUR_D: "#2b8ec7",
+        BELLY: "#8ed3f2",
+        STRIPE: "#1b6ba3",
+        INK: "#1d1d1f",
+        EYE: "#ff6a12",
+        EYE_RIM: "#d8410a",
+        EYE_HOT: "#ffab3d",
+        PAW: "#ffffff",
+        EAR_IN: "#efa2b2"
+      };
+      var LABELS = {
+        FUR: "몸 기본",
+        FUR_D: "그늘(귀·뒷다리)",
+        BELLY: "배·가슴",
+        STRIPE: "줄무늬",
+        INK: "윤곽선·코",
+        EYE: "눈 홍채",
+        EYE_RIM: "눈 테두리",
+        EYE_HOT: "눈 심지",
+        PAW: "발·주둥이",
+        EAR_IN: "귀 안쪽"
+      };
+      // 비율 (슬라이더로 조절) — 다리는 건드리지 않는다
+      var SHAPE_DEFAULTS = { HEAD_SCALE: 1.14, BODY_W: 36, BODY_H: 25 };
+      var SHAPE = Object.assign({}, SHAPE_DEFAULTS);
+      var HEAD_SCALE, BODY_W, BODY_H;
+      function applyShape() {
+        HEAD_SCALE = SHAPE.HEAD_SCALE;
+        BODY_W = SHAPE.BODY_W;
+        BODY_H = SHAPE.BODY_H;
+      }
+
+      var PAL = Object.assign({}, DEFAULTS);
+      var FUR, FUR_D, BELLY, STRIPE, INK, EYE, EYE_RIM, EYE_HOT, PAW, EAR_IN;
+      function applyPal() {
+        FUR = PAL.FUR;
+        FUR_D = PAL.FUR_D;
+        BELLY = PAL.BELLY;
+        STRIPE = PAL.STRIPE;
+        INK = PAL.INK;
+        EYE = PAL.EYE;
+        EYE_RIM = PAL.EYE_RIM;
+        EYE_HOT = PAL.EYE_HOT;
+        PAW = PAL.PAW;
+        EAR_IN = PAL.EAR_IN;
+      }
+
+      // ============================================================
+      // 여기부터 게임 index.html 과 동일한 그리기 코드
+      // ============================================================
+      function roundRect(x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
+
+      function line(x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      function leg(x, topY, dx, dy) {
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x + dx, dy - 2);
+        ctx.stroke();
+      }
+
+      // 등 줄무늬: 살짝 휜 선
+      function bstripe(x1, y1, x2, y2, bend) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo((x1 + x2) / 2 + bend, (y1 + y2) / 2, x2, y2);
+        ctx.stroke();
+      }
+
+      function qpt(p0, p1, p2, t) {
+        var u = 1 - t;
+        return [
+          u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+          u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]
+        ];
+      }
+
+      // 꼬리 곡선에서 t 구간만 잘라 그린다 (꼬리 줄무늬용)
+      function tailBand(p0, p1, p2, t0, t1, color, w, cap) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = w;
+        ctx.lineCap = cap;
+        ctx.beginPath();
+        for (var i = 0; i <= 8; i++) {
+          var p = qpt(p0, p1, p2, t0 + ((t1 - t0) * i) / 8);
+          if (i === 0) ctx.moveTo(p[0], p[1]);
+          else ctx.lineTo(p[0], p[1]);
+        }
+        ctx.stroke();
+      }
+
+      // 흰 앞발/뒷발
+      function paw(x, y) {
+        ctx.fillStyle = PAW;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 4.6, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      function drawTiger(cx, feetY, phase, airborne) {
+        ctx.save();
+        ctx.translate(cx, feetY);
+
+        // 그림자 (공중에서는 작아진다)
+        ctx.fillStyle = "rgba(40,60,80,0.16)";
+        var sc = airborne ? 0.55 : 1;
+        ctx.beginPath();
+        ctx.ellipse(20, 1, (BODY_W * 0.64 + 2) * sc, 4 * sc, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        var swing = airborne ? 0 : Math.sin(phase * Math.PI * 2);
+        var swingB = airborne ? 0 : Math.sin(phase * Math.PI * 2 + Math.PI);
+        ctx.translate(0, airborne ? 0 : -Math.abs(swing) * 1.6);
+        var lift = airborne ? 8 : 0;
+
+        // 꼬리: 검은 윤곽 + 진한 파란 띠 두 줄 + 흰 꼬리끝
+        var p0 = [4, -11 - BODY_H * 0.55];
+        var p1 = [-11, -28 - lift - swing * 3];
+        var p2 = [-15, -40 - lift - swing * 4];
+        tailBand(p0, p1, p2, 0, 1, INK, 9, "round");
+        tailBand(p0, p1, p2, 0, 1, FUR, 7, "round");
+        tailBand(p0, p1, p2, 0.28, 0.42, STRIPE, 7, "butt");
+        tailBand(p0, p1, p2, 0.56, 0.7, STRIPE, 7, "butt");
+        ctx.fillStyle = PAW;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(p2[0], p2[1], 3.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 뒷다리
+        var bkDx = airborne ? 6 : swingB * 8;
+        var bkDy = airborne ? -7 : 0;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 9.8;
+        leg(9, -12, bkDx, bkDy);
+        ctx.strokeStyle = FUR_D;
+        ctx.lineWidth = 8;
+        leg(9, -12, bkDx, bkDy);
+        paw(9 + bkDx, bkDy - 2);
+
+        // 몸통
+        ctx.fillStyle = FUR;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.6;
+        var bTop = -11 - BODY_H; // 몸통 윗선
+        roundRect(0, bTop, BODY_W, BODY_H, Math.min(12, BODY_H / 2));
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = BELLY; // 가슴/배
+        roundRect(6, bTop + BODY_H * 0.44, BODY_W - 10, BODY_H * 0.5, 7);
+        ctx.fill();
+
+        ctx.strokeStyle = STRIPE; // 등 줄무늬 4줄 (몸통 크기에 맞춰 자동 배치)
+        ctx.lineWidth = 3.4;
+        ctx.lineCap = "round";
+        for (var si = 0; si < 4; si++) {
+          var sx = BODY_W * (0.22 + si * 0.19);
+          bstripe(sx, bTop + 1.5, sx - 1, bTop + BODY_H * 0.6, -1.2);
+        }
+
+        // 앞다리
+        var frDx = airborne ? -7 : swing * 8;
+        var frDy = airborne ? -8 : 0;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 9.8;
+        leg(28, -12, frDx, frDy);
+        ctx.strokeStyle = FUR;
+        ctx.lineWidth = 8;
+        leg(28, -12, frDx, frDy);
+        paw(28 + frDx, frDy - 2);
+
+        // 머리
+        var hx = 37;
+        var hy = -40;
+
+        ctx.save();
+        ctx.translate(hx, hy);
+        ctx.scale(HEAD_SCALE, HEAD_SCALE);
+        ctx.translate(-hx, -hy);
+
+        ctx.fillStyle = FUR;
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = FUR_D; // 귀
+        ctx.beginPath();
+        ctx.arc(hx - 11, hy - 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(hx + 11, hy - 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = EAR_IN;
+        ctx.beginPath();
+        ctx.arc(hx - 11, hy - 12, 2.9, 0, Math.PI * 2);
+        ctx.arc(hx + 11, hy - 12, 2.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 주둥이 + 볼 털
+        ctx.fillStyle = PAW;
+        ctx.beginPath();
+        ctx.ellipse(hx + 1, hy + 8, 11.5, 7.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(hx - 10, hy + 5, 5, 0, Math.PI * 2);
+        ctx.arc(hx + 12, hy + 5, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 이마의 임금 왕(王) — 조선 호랑이 표식
+        ctx.strokeStyle = STRIPE;
+        ctx.lineWidth = 1.9;
+        ctx.lineCap = "round";
+        var wy = hy - 9.5;
+        line(hx - 4.5, wy - 2.6, hx + 4.5, wy - 2.6);
+        line(hx - 3.2, wy, hx + 3.2, wy);
+        line(hx - 4.5, wy + 2.6, hx + 4.5, wy + 2.6);
+        line(hx, wy - 2.6, hx, wy + 2.6);
+
+        ctx.lineWidth = 2.4; // 볼 줄무늬
+        line(hx - 14.8, hy - 4.5, hx - 10.5, hy - 5.5);
+        line(hx - 14.5, hy + 0.5, hx - 10.5, hy - 0.5);
+        line(hx + 14.8, hy - 4.5, hx + 11.5, hy - 5.5);
+
+        // 눈: 진한 형광 주황 + 검은 세로 동공
+        var eyes = [[hx - 6, hy + 1], [hx + 7, hy + 1]];
+        for (var ei = 0; ei < 2; ei++) {
+          var ex = eyes[ei][0];
+          var ey = eyes[ei][1];
+          ctx.fillStyle = EYE_RIM;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(ex, ey, 4.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = EYE;
+          ctx.beginPath();
+          ctx.arc(ex, ey + 0.2, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = EYE_HOT;
+          ctx.beginPath();
+          ctx.arc(ex, ey + 0.4, 1.9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.ellipse(ex + 0.3, ey + 0.5, 1.15, 2.3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(ex - 1.4, ey - 1.5, 0.95, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = INK; // 코
+        ctx.beginPath();
+        ctx.moveTo(hx - 1.5, hy + 5.5);
+        ctx.lineTo(hx + 4.5, hy + 5.5);
+        ctx.quadraticCurveTo(hx + 1.5, hy + 10, hx - 1.5, hy + 5.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // 다문 입
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        ctx.moveTo(hx + 1.5, hy + 9.5);
+        ctx.quadraticCurveTo(hx - 0.5, hy + 13, hx - 3.5, hy + 10.5);
+        ctx.moveTo(hx + 1.5, hy + 9.5);
+        ctx.quadraticCurveTo(hx + 3.5, hy + 13, hx + 6.5, hy + 10.5);
+        ctx.stroke();
+
+        // 입 밖으로 길게 내려온 윗 송곳니 두 개
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 1.1;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(hx - 3.4, hy + 9.6);
+        ctx.lineTo(hx - 0.4, hy + 9.6);
+        ctx.lineTo(hx - 1.9, hy + 19.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hx + 3.6, hy + 9.6);
+        ctx.lineTo(hx + 6.6, hy + 9.6);
+        ctx.lineTo(hx + 5.1, hy + 19.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore(); // 머리 확대 해제
+        ctx.restore();
+      }
+
+      // ============================================================
+      // 작업대 렌더링
+      // ============================================================
+      var BG = {
+        하늘: "#fbf1e2",
+        산: "#aab7c3",
+        기와집: "#798794",
+        흙길: "#ddcdb0"
+      };
+
+      function paint(canvas, bgColor, fn) {
+        ctx = canvas.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (bgColor) {
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        fn(canvas);
+      }
+
+      function renderAll() {
+        applyPal();
+        applyShape();
+
+        // --- 확대 보기 ---
+        paint(document.getElementById("big"), BG["산"], function () {
+          ctx.save();
+          ctx.scale(6, 6);
+          drawTiger(25, 64, 0.25, false);
+          ctx.restore();
+        });
+
+        // --- 달리기 사이클 + 점프 (1배) ---
+        paint(document.getElementById("strip1"), "#fdf8ef", function () {
+          for (var i = 0; i < 7; i++) drawTiger(20 + i * 95, 76, i / 7, false);
+          drawTiger(20 + 7 * 95, 76, 0, true);
+        });
+
+        // --- 3배 ---
+        paint(document.getElementById("strip3"), "#fdf8ef", function () {
+          ctx.save();
+          ctx.scale(3, 3);
+          drawTiger(20, 70, 0, false);
+          drawTiger(100, 70, 0.5, false);
+          drawTiger(180, 70, 0, true);
+          ctx.restore();
+        });
+
+        // --- 배경 대비 ---
+        paint(document.getElementById("bg"), null, function (c) {
+          var names = Object.keys(BG);
+          var w = c.width / names.length;
+          for (var i = 0; i < names.length; i++) {
+            ctx.fillStyle = BG[names[i]];
+            ctx.fillRect(i * w, 0, w, c.height);
+            drawTiger(i * w + 55, 86, 0.25, false);
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.font = '11px "Malgun Gothic", sans-serif';
+            ctx.fillText(names[i], i * w + 10, 18);
+          }
+        });
+
+        // --- 색상 코드 출력 ---
+        var out = [];
+        for (var k in DEFAULTS) {
+          out.push('        var ' + k + ' = "' + PAL[k] + '";');
+        }
+        out.push("");
+        for (var sk in SHAPE_DEFAULTS) {
+          out.push("        var " + sk + " = " + SHAPE[sk] + ";");
+        }
+        document.getElementById("code").textContent = out.join("\n");
+      }
+
+      // --- 색상 컨트롤 ---
+      var palBox = document.getElementById("pal");
+      function buildControls() {
+        palBox.innerHTML = "";
+        Object.keys(DEFAULTS).forEach(function (k) {
+          var label = document.createElement("label");
+          var input = document.createElement("input");
+          input.type = "color";
+          input.value = PAL[k];
+          input.addEventListener("input", function () {
+            PAL[k] = input.value;
+            renderAll();
+          });
+          var span = document.createElement("span");
+          span.textContent = LABELS[k];
+          label.appendChild(input);
+          label.appendChild(span);
+          palBox.appendChild(label);
+        });
+      }
+
+      var SHAPE_UI = {
+        HEAD_SCALE: ["머리 크기", 0.95, 1.45, 0.01],
+        BODY_W: ["몸통 폭", 28, 46, 0.5],
+        BODY_H: ["몸통 높이", 18, 34, 0.5]
+      };
+      var shapeBox = document.getElementById("shape");
+      function buildShape() {
+        shapeBox.innerHTML = "";
+        Object.keys(SHAPE_UI).forEach(function (k) {
+          var cfg = SHAPE_UI[k];
+          var label = document.createElement("label");
+          var name = document.createElement("span");
+          name.textContent = cfg[0];
+          var input = document.createElement("input");
+          input.type = "range";
+          input.min = cfg[1];
+          input.max = cfg[2];
+          input.step = cfg[3];
+          input.value = SHAPE[k];
+          var out = document.createElement("output");
+          out.textContent = SHAPE[k];
+          input.addEventListener("input", function () {
+            SHAPE[k] = parseFloat(input.value);
+            out.textContent = SHAPE[k];
+            renderAll();
+          });
+          label.appendChild(name);
+          label.appendChild(input);
+          label.appendChild(out);
+          shapeBox.appendChild(label);
+        });
+      }
+
+      document.getElementById("reset").addEventListener("click", function () {
+        PAL = Object.assign({}, DEFAULTS);
+        SHAPE = Object.assign({}, SHAPE_DEFAULTS);
+        buildControls();
+        buildShape();
+        renderAll();
+      });
+
+      // --- 움직이는 미리보기: 게임과 같은 중력/점프 값으로 실제 리듬을 재현 ---
+      var GRAVITY = 0.66;
+      var JUMP_FORCE = 12;
+      var GROUND = 62; // 미리보기 안에서의 바닥 높이
+      var animY = GROUND;
+      var animVy = 0;
+      var animGrounded = true;
+      var animPhase = 0;
+      var animWait = 70;
+
+      function animFrame() {
+        var c = document.getElementById("anim");
+        if (animGrounded) {
+          animWait -= 1;
+          if (animWait <= 0) {
+            animVy = -JUMP_FORCE;
+            animGrounded = false;
+            animWait = 70 + Math.floor(Math.random() * 40);
+          }
+        }
+        animVy += GRAVITY;
+        animY += animVy;
+        if (animY >= GROUND) {
+          animY = GROUND;
+          animVy = 0;
+          animGrounded = true;
+        }
+        if (animGrounded) animPhase = (animPhase + 0.11) % 1;
+
+        paint(c, "#fdf8ef", function () {
+          ctx.strokeStyle = "#cbb896";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, GROUND * 3);
+          ctx.lineTo(c.width, GROUND * 3);
+          ctx.stroke();
+          ctx.save();
+          ctx.scale(3, 3);
+          drawTiger(110, animY, animPhase, !animGrounded);
+          ctx.restore();
+        });
+        requestAnimationFrame(animFrame);
+      }
+
+      buildControls();
+      buildShape();
+      renderAll();
+      requestAnimationFrame(animFrame);
+    </script>
+  </body>
+</html>
