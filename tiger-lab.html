@@ -486,14 +486,14 @@
         ctx.closePath();
         ctx.fill();
 
-        // 다문 입
+        // 다문 입: 양옆으로 길게 뻗어 송곳니 바깥까지 이어진다
         ctx.strokeStyle = INK;
         ctx.lineWidth = 1.7;
         ctx.beginPath();
-        ctx.moveTo(hx + 1.5, hy + 9.5);
-        ctx.quadraticCurveTo(hx - 0.5, hy + 13, hx - 3.5, hy + 10.5);
-        ctx.moveTo(hx + 1.5, hy + 9.5);
-        ctx.quadraticCurveTo(hx + 3.5, hy + 13, hx + 6.5, hy + 10.5);
+        ctx.moveTo(hx + 1.5, hy + 9);
+        ctx.quadraticCurveTo(hx - 2.5, hy + 14, hx - 8, hy + 10);
+        ctx.moveTo(hx + 1.5, hy + 9);
+        ctx.quadraticCurveTo(hx + 5.5, hy + 14, hx + 11, hy + 10);
         ctx.stroke();
 
         // 입 양 끝에서 바깥으로 휘어 내려온 윗 송곳니 두 개
@@ -501,8 +501,8 @@
         ctx.strokeStyle = INK;
         ctx.lineWidth = 1.1;
         ctx.lineJoin = "round";
-        fang(hx - 3.5, hy + 9.6, 3.4, 10, -1);
-        fang(hx + 6.5, hy + 9.6, 3.4, 10, 1);
+        fang(hx - 3.5, hy + 11, 3.4, 10, -1);
+        fang(hx + 6.5, hy + 11, 3.4, 10, 1);
 
         ctx.restore(); // 머리 확대 해제
         ctx.restore();
