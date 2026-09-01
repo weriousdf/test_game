@@ -781,10 +781,15 @@
         // ============================================================
         // 플레이어: 뿔과 방망이를 든 아기 호랑이
         // ============================================================
-        var ORANGE = "#ef9042";
-        var ORANGE_D = "#d8752c";
-        var CREAM = "#fbe8d4";
-        var DARK = "#2f241d";
+        // 더피와 같은 종의 호랑이 색: 하늘색 몸에 진한 파란 줄무늬, 호박색 눈, 흰 발
+        var FUR = "#3fa9e0"; // 몸 기본색
+        var FUR_D = "#2b8ec7"; // 그늘진 부분 (귀 바깥, 뒷다리)
+        var BELLY = "#8ed3f2"; // 배, 가슴
+        var STRIPE = "#1b6ba3"; // 줄무늬, 이마 무늬
+        var INK = "#1d1d1f"; // 윤곽선, 코, 입
+        var EYE = "#f5c518"; // 눈 (호박색)
+        var PAW = "#ffffff"; // 발, 주둥이, 꼬리끝
+        var EAR_IN = "#efa2b2"; // 귀 안쪽
 
         function horn(x, y, tilt) {
           ctx.save();
@@ -807,124 +812,218 @@
           ctx.stroke();
         }
 
+        // 등 줄무늬: 살짝 휜 선
+        function bstripe(x1, y1, x2, y2, bend) {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo((x1 + x2) / 2 + bend, (y1 + y2) / 2, x2, y2);
+          ctx.stroke();
+        }
+
+        function qpt(p0, p1, p2, t) {
+          var u = 1 - t;
+          return [
+            u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+            u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]
+          ];
+        }
+
+        // 꼬리 곡선에서 t 구간만 잘라 그린다 (꼬리 줄무늬용)
+        function tailBand(p0, p1, p2, t0, t1, color, w, cap) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = w;
+          ctx.lineCap = cap;
+          ctx.beginPath();
+          for (var i = 0; i <= 8; i++) {
+            var p = qpt(p0, p1, p2, t0 + ((t1 - t0) * i) / 8);
+            if (i === 0) ctx.moveTo(p[0], p[1]);
+            else ctx.lineTo(p[0], p[1]);
+          }
+          ctx.stroke();
+        }
+
+        // 흰 앞발/뒷발
+        function paw(x, y) {
+          ctx.fillStyle = PAW;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.ellipse(x, y, 4.6, 3.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
         function drawTiger(cx, feetY, phase, airborne) {
           ctx.save();
           ctx.translate(cx, feetY);
 
           // 그림자 (공중에서는 작아진다)
-          ctx.fillStyle = "rgba(70,52,32,0.16)";
-          var s = airborne ? 0.55 : 1;
+          ctx.fillStyle = "rgba(40,60,80,0.16)";
+          var sc = airborne ? 0.55 : 1;
           ctx.beginPath();
-          ctx.ellipse(22, 1, 23 * s, 4 * s, 0, 0, Math.PI * 2);
+          ctx.ellipse(20, 1, 23 * sc, 4 * sc, 0, 0, Math.PI * 2);
           ctx.fill();
 
           var swing = airborne ? 0 : Math.sin(phase * Math.PI * 2);
           var swingB = airborne ? 0 : Math.sin(phase * Math.PI * 2 + Math.PI);
-          var bob = airborne ? 0 : Math.abs(swing) * 1.6;
-          ctx.translate(0, -bob);
-
+          ctx.translate(0, airborne ? 0 : -Math.abs(swing) * 1.6);
           var lift = airborne ? 8 : 0;
 
-          // 꼬리
-          ctx.lineCap = "round";
-          ctx.strokeStyle = ORANGE;
-          ctx.lineWidth = 6;
+          // ---- 꼬리: 검은 윤곽 + 진한 파란 띠 두 줄 + 흰 꼬리끝 ----
+          var p0 = [4, -24];
+          var p1 = [-11, -28 - lift - swing * 3];
+          var p2 = [-15, -40 - lift - swing * 4];
+          tailBand(p0, p1, p2, 0, 1, INK, 9, "round");
+          tailBand(p0, p1, p2, 0, 1, FUR, 7, "round");
+          tailBand(p0, p1, p2, 0.28, 0.42, STRIPE, 7, "butt");
+          tailBand(p0, p1, p2, 0.56, 0.7, STRIPE, 7, "butt");
+          ctx.fillStyle = PAW;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.4;
           ctx.beginPath();
-          ctx.moveTo(4, -26);
-          ctx.quadraticCurveTo(
-            -11,
-            -30 - lift - swing * 3,
-            -14,
-            -41 - lift - swing * 4
-          );
+          ctx.arc(p2[0], p2[1], 3.9, 0, Math.PI * 2);
+          ctx.fill();
           ctx.stroke();
-          ctx.fillStyle = CREAM;
-          ctx.beginPath();
-          ctx.arc(-14, -41 - lift - swing * 4, 3.3, 0, Math.PI * 2);
+
+          // ---- 뒷다리 ----
+          var bkDx = airborne ? 6 : swingB * 8;
+          var bkDy = airborne ? -7 : 0;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 9.8;
+          leg(9, -12, bkDx, bkDy);
+          ctx.strokeStyle = FUR_D;
+          ctx.lineWidth = 8;
+          leg(9, -12, bkDx, bkDy);
+          paw(9 + bkDx, bkDy - 2);
+
+          // ---- 몸통: 통통하게 ----
+          ctx.fillStyle = FUR;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.6;
+          roundRect(0, -33, 33, 22, 11);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = BELLY; // 가슴/배
+          roundRect(6, -23, 24, 12, 7);
           ctx.fill();
 
-          // 뒷다리
-          ctx.strokeStyle = ORANGE_D;
-          ctx.lineWidth = 7;
-          leg(10, -13, airborne ? 6 : swingB * 8, airborne ? -7 : 0);
+          ctx.strokeStyle = STRIPE; // 등 줄무늬 4줄
+          ctx.lineWidth = 3.4;
+          ctx.lineCap = "round";
+          bstripe(8, -32.5, 7, -25, -1.2);
+          bstripe(15, -33.5, 14, -25.5, -1.2);
+          bstripe(22, -33.5, 21, -25.5, -1.2);
+          bstripe(28.5, -32, 28, -26, -1);
 
-          // 몸통
-          ctx.fillStyle = ORANGE;
-          roundRect(2, -33, 32, 21, 10);
-          ctx.fill();
-          ctx.fillStyle = CREAM; // 배
-          roundRect(8, -22, 22, 10, 6);
-          ctx.fill();
+          // ---- 앞다리 ----
+          var frDx = airborne ? -7 : swing * 8;
+          var frDy = airborne ? -8 : 0;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 9.8;
+          leg(28, -12, frDx, frDy);
+          ctx.strokeStyle = FUR;
+          ctx.lineWidth = 8;
+          leg(28, -12, frDx, frDy);
+          paw(28 + frDx, frDy - 2);
 
-          ctx.strokeStyle = DARK; // 몸통 줄무늬
-          ctx.lineWidth = 2.6;
-          line(12, -32, 11.5, -25.5);
-          line(19, -33.5, 18.5, -26.5);
-          line(26, -32, 25.5, -26);
-
-          // 앞다리
-          ctx.strokeStyle = ORANGE;
-          ctx.lineWidth = 7;
-          leg(29, -13, airborne ? -7 : swing * 8, airborne ? -8 : 0);
-
-          // 머리
-          var hx = 38;
+          // ---- 머리: 크고 둥글게 ----
+          var hx = 37;
           var hy = -40;
-          ctx.fillStyle = ORANGE;
-          ctx.beginPath();
-          ctx.arc(hx, hy, 13, 0, Math.PI * 2);
-          ctx.fill();
 
-          ctx.fillStyle = ORANGE_D; // 귀
-          ctx.beginPath();
-          ctx.arc(hx - 8, hy - 11, 5, 0, Math.PI * 2);
-          ctx.arc(hx + 8, hy - 11, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "#f8cba9";
-          ctx.beginPath();
-          ctx.arc(hx - 8, hy - 11, 2.4, 0, Math.PI * 2);
-          ctx.arc(hx + 8, hy - 11, 2.4, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#f4e4c4"; // 도깨비 뿔
-          ctx.strokeStyle = "#c9ae87";
-          ctx.lineWidth = 1;
-          horn(hx - 5, hy - 14, -0.32);
-          horn(hx + 5, hy - 14, 0.32);
-
-          ctx.fillStyle = CREAM; // 주둥이
-          ctx.beginPath();
-          ctx.ellipse(hx + 6, hy + 4, 9, 7, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = DARK; // 코
-          ctx.beginPath();
-          ctx.ellipse(hx + 11, hy + 1, 2.5, 2, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = DARK; // 입
+          ctx.fillStyle = FUR;
+          ctx.strokeStyle = INK;
           ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.moveTo(hx + 10, hy + 3.5);
-          ctx.quadraticCurveTo(hx + 7, hy + 7.5, hx + 3, hy + 5);
+          ctx.arc(hx, hy, 15, 0, Math.PI * 2);
+          ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = DARK; // 눈
+          ctx.fillStyle = FUR_D; // 귀
           ctx.beginPath();
-          ctx.arc(hx + 2, hy - 2, 2.4, 0, Math.PI * 2);
-          ctx.arc(hx - 8, hy - 2, 2.4, 0, Math.PI * 2);
+          ctx.arc(hx - 11, hy - 12, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(hx + 11, hy - 12, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = EAR_IN;
+          ctx.beginPath();
+          ctx.arc(hx - 11, hy - 12, 2.9, 0, Math.PI * 2);
+          ctx.arc(hx + 11, hy - 12, 2.9, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#f0e2c4"; // 뿔
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.2;
+          horn(hx - 5, hy - 15, -0.3);
+          horn(hx + 5, hy - 15, 0.3);
+
+          // 주둥이 + 볼 털
+          ctx.fillStyle = PAW;
+          ctx.beginPath();
+          ctx.ellipse(hx + 1, hy + 8, 11.5, 7.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(hx - 10, hy + 5, 5, 0, Math.PI * 2);
+          ctx.arc(hx + 12, hy + 5, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 이마의 임금 왕(王) — 조선 호랑이 표식
+          ctx.strokeStyle = STRIPE;
+          ctx.lineWidth = 1.9;
+          ctx.lineCap = "round";
+          var wy = hy - 9.5;
+          line(hx - 4.5, wy - 2.6, hx + 4.5, wy - 2.6);
+          line(hx - 3.2, wy, hx + 3.2, wy);
+          line(hx - 4.5, wy + 2.6, hx + 4.5, wy + 2.6);
+          line(hx, wy - 2.6, hx, wy + 2.6);
+
+          ctx.lineWidth = 2.4; // 볼 줄무늬
+          line(hx - 14.8, hy - 4.5, hx - 10.5, hy - 5.5);
+          line(hx - 14.5, hy + 0.5, hx - 10.5, hy - 0.5);
+          line(hx + 14.8, hy - 4.5, hx + 11.5, hy - 5.5);
+
+          // 눈: 호박색 흰자에 검은 눈동자
+          ctx.fillStyle = EYE;
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(hx - 6, hy + 1, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(hx + 7, hy + 1, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = INK;
+          ctx.beginPath();
+          ctx.arc(hx - 5.6, hy + 1.4, 2.1, 0, Math.PI * 2);
+          ctx.arc(hx + 7.4, hy + 1.4, 2.1, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = "#fff";
           ctx.beginPath();
-          ctx.arc(hx + 2.9, hy - 2.9, 0.95, 0, Math.PI * 2);
-          ctx.arc(hx - 7.1, hy - 2.9, 0.95, 0, Math.PI * 2);
+          ctx.arc(hx - 6.5, hy + 0.2, 0.9, 0, Math.PI * 2);
+          ctx.arc(hx + 6.5, hy + 0.2, 0.9, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.strokeStyle = DARK; // 머리 줄무늬
-          ctx.lineWidth = 2.6;
-          line(hx - 3, hy - 11.5, hx - 4, hy - 7);
-          line(hx + 2, hy - 12, hx + 1.5, hy - 7.5);
-          line(hx - 12.5, hy - 3, hx - 9, hy - 3.6);
+          ctx.fillStyle = INK; // 코
+          ctx.beginPath();
+          ctx.moveTo(hx - 1.5, hy + 5.5);
+          ctx.lineTo(hx + 4.5, hy + 5.5);
+          ctx.quadraticCurveTo(hx + 1.5, hy + 10, hx - 1.5, hy + 5.5);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = INK; // 입
+          ctx.lineWidth = 1.7;
+          ctx.beginPath();
+          ctx.moveTo(hx + 1.5, hy + 9.5);
+          ctx.quadraticCurveTo(hx - 0.5, hy + 13.5, hx - 3.5, hy + 11);
+          ctx.moveTo(hx + 1.5, hy + 9.5);
+          ctx.quadraticCurveTo(hx + 3.5, hy + 13.5, hx + 6.5, hy + 11);
+          ctx.stroke();
 
           ctx.restore();
         }
