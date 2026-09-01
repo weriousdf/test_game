@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>test_game</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --card: #ffffff;
+        --text: #1a1c20;
+        --muted: #5c6370;
+        --accent: #2f6bd8;
+        --border: #e3e6ea;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15171b;
+          --card: #1e2126;
+          --text: #eceef1;
+          --muted: #9aa2ad;
+          --accent: #7aa5f5;
+          --border: #2d3238;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px 32px;
+        max-width: 480px;
+        text-align: center;
+      }
+      h1 { margin: 0 0 8px; font-size: 1.6rem; }
+      p { margin: 0 0 20px; color: var(--muted); line-height: 1.6; }
+      .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 6px;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <span class="badge">배포 성공 ✓</span>
+      <h1>test_game</h1>
+      <p>
+        GitHub Pages 배포 경로가 정상 동작합니다.<br />
+        이 화면이 보이면 <code>main</code> 브랜치의 <code>/ (root)</code> 설정이
+        올바르게 적용된 것입니다.
+      </p>
+      <p>수업용 게임은 이 자리에 들어갑니다.</p>
+    </main>
+  </body>
+</html>
