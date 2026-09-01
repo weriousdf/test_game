@@ -127,7 +127,7 @@
 
         // 히트박스는 그림보다 작게 잡아 판정을 관대하게 한다.
         // (플레이어 발 위치 player.y 기준 상대 좌표)
-        var HB = { dx: 7, dy: -47, w: 38, h: 45 };
+        var HB = { dx: 7, dy: -47, w: 43, h: 45 };
 
         // ============================================================
         // 상태 (PRD 3. 상태 관리)
@@ -793,6 +793,11 @@
         var PAW = "#ffffff"; // 발, 주둥이, 꼬리끝
         var EAR_IN = "#efa2b2"; // 귀 안쪽
 
+        // 비율 — 작업대(tiger-lab.html)에서 확정한 값
+        var HEAD_SCALE = 1.14; // 머리 확대 배율
+        var BODY_W = 36; // 몸통 폭
+        var BODY_H = 25; // 몸통 높이
+
         function leg(x, topY, dx, dy) {
           ctx.beginPath();
           ctx.moveTo(x, topY);
@@ -849,7 +854,7 @@
           ctx.fillStyle = "rgba(40,60,80,0.16)";
           var sc = airborne ? 0.55 : 1;
           ctx.beginPath();
-          ctx.ellipse(20, 1, 23 * sc, 4 * sc, 0, 0, Math.PI * 2);
+          ctx.ellipse(20, 1, (BODY_W * 0.64 + 2) * sc, 4 * sc, 0, 0, Math.PI * 2);
           ctx.fill();
 
           var swing = airborne ? 0 : Math.sin(phase * Math.PI * 2);
@@ -857,8 +862,8 @@
           ctx.translate(0, airborne ? 0 : -Math.abs(swing) * 1.6);
           var lift = airborne ? 8 : 0;
 
-          // ---- 꼬리: 검은 윤곽 + 진한 파란 띠 두 줄 + 흰 꼬리끝 ----
-          var p0 = [4, -24];
+          // 꼬리: 검은 윤곽 + 진한 파란 띠 두 줄 + 흰 꼬리끝
+          var p0 = [4, -11 - BODY_H * 0.55];
           var p1 = [-11, -28 - lift - swing * 3];
           var p2 = [-15, -40 - lift - swing * 4];
           tailBand(p0, p1, p2, 0, 1, INK, 9, "round");
@@ -873,7 +878,7 @@
           ctx.fill();
           ctx.stroke();
 
-          // ---- 뒷다리 ----
+          // 뒷다리
           var bkDx = airborne ? 6 : swingB * 8;
           var bkDy = airborne ? -7 : 0;
           ctx.lineCap = "round";
@@ -885,26 +890,27 @@
           leg(9, -12, bkDx, bkDy);
           paw(9 + bkDx, bkDy - 2);
 
-          // ---- 몸통: 통통하게 ----
+          // 몸통
           ctx.fillStyle = FUR;
           ctx.strokeStyle = INK;
           ctx.lineWidth = 1.6;
-          roundRect(0, -33, 33, 22, 11);
+          var bTop = -11 - BODY_H; // 몸통 윗선
+          roundRect(0, bTop, BODY_W, BODY_H, Math.min(12, BODY_H / 2));
           ctx.fill();
           ctx.stroke();
           ctx.fillStyle = BELLY; // 가슴/배
-          roundRect(6, -23, 24, 12, 7);
+          roundRect(6, bTop + BODY_H * 0.44, BODY_W - 10, BODY_H * 0.5, 7);
           ctx.fill();
 
-          ctx.strokeStyle = STRIPE; // 등 줄무늬 4줄
+          ctx.strokeStyle = STRIPE; // 등 줄무늬 4줄 (몸통 크기에 맞춰 자동 배치)
           ctx.lineWidth = 3.4;
           ctx.lineCap = "round";
-          bstripe(8, -32.5, 7, -25, -1.2);
-          bstripe(15, -33.5, 14, -25.5, -1.2);
-          bstripe(22, -33.5, 21, -25.5, -1.2);
-          bstripe(28.5, -32, 28, -26, -1);
+          for (var si = 0; si < 4; si++) {
+            var sx = BODY_W * (0.22 + si * 0.19);
+            bstripe(sx, bTop + 1.5, sx - 1, bTop + BODY_H * 0.6, -1.2);
+          }
 
-          // ---- 앞다리 ----
+          // 앞다리
           var frDx = airborne ? -7 : swing * 8;
           var frDy = airborne ? -8 : 0;
           ctx.strokeStyle = INK;
@@ -915,9 +921,14 @@
           leg(28, -12, frDx, frDy);
           paw(28 + frDx, frDy - 2);
 
-          // ---- 머리: 크고 둥글게 ----
+          // 머리
           var hx = 37;
           var hy = -40;
+
+          ctx.save();
+          ctx.translate(hx, hy);
+          ctx.scale(HEAD_SCALE, HEAD_SCALE);
+          ctx.translate(-hx, -hy);
 
           ctx.fillStyle = FUR;
           ctx.strokeStyle = INK;
@@ -1005,15 +1016,37 @@
           ctx.closePath();
           ctx.fill();
 
-          ctx.strokeStyle = INK; // 입
+          // 다문 입
+          ctx.strokeStyle = INK;
           ctx.lineWidth = 1.7;
           ctx.beginPath();
           ctx.moveTo(hx + 1.5, hy + 9.5);
-          ctx.quadraticCurveTo(hx - 0.5, hy + 13.5, hx - 3.5, hy + 11);
+          ctx.quadraticCurveTo(hx - 0.5, hy + 13, hx - 3.5, hy + 10.5);
           ctx.moveTo(hx + 1.5, hy + 9.5);
-          ctx.quadraticCurveTo(hx + 3.5, hy + 13.5, hx + 6.5, hy + 11);
+          ctx.quadraticCurveTo(hx + 3.5, hy + 13, hx + 6.5, hy + 10.5);
           ctx.stroke();
 
+          // 입 밖으로 길게 내려온 윗 송곳니 두 개
+          ctx.fillStyle = "#ffffff";
+          ctx.strokeStyle = INK;
+          ctx.lineWidth = 1.1;
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(hx - 3.4, hy + 9.6);
+          ctx.lineTo(hx - 0.4, hy + 9.6);
+          ctx.lineTo(hx - 1.9, hy + 19.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(hx + 3.6, hy + 9.6);
+          ctx.lineTo(hx + 6.6, hy + 9.6);
+          ctx.lineTo(hx + 5.1, hy + 19.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.restore(); // 머리 확대 해제
           ctx.restore();
         }
 
