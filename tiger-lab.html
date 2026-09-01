@@ -296,6 +296,26 @@
         ctx.stroke();
       }
 
+      // 바깥으로 휘어 내려온 윗 송곳니.
+      // 뿌리(rootX, rootY)에서 시작해 끝이 바깥쪽으로 벌어지는 초승달 모양.
+      // outward 가 -1 이면 왼쪽 송곳니(좌우 반전).
+      function fang(rootX, rootY, w, len, outward) {
+        ctx.save();
+        ctx.translate(rootX, rootY);
+        ctx.scale(outward, 1);
+        var hw = w / 2;
+        ctx.beginPath();
+        ctx.moveTo(-hw, 0); // 뿌리 안쪽
+        // 안쪽 모서리: 오목하게 훑어 내려가 끝점으로
+        ctx.quadraticCurveTo(-hw + len * 0.1, len * 0.55, len * 0.42, len * 0.96);
+        // 바깥 모서리: 볼록하게 뿌리로 되돌아옴
+        ctx.quadraticCurveTo(hw + len * 0.24, len * 0.3, hw, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
       function drawTiger(cx, feetY, phase, airborne) {
         ctx.save();
         ctx.translate(cx, feetY);
@@ -476,25 +496,13 @@
         ctx.quadraticCurveTo(hx + 3.5, hy + 13, hx + 6.5, hy + 10.5);
         ctx.stroke();
 
-        // 입 밖으로 길게 내려온 윗 송곳니 두 개
+        // 입 양 끝에서 바깥으로 휘어 내려온 윗 송곳니 두 개
         ctx.fillStyle = "#ffffff";
         ctx.strokeStyle = INK;
         ctx.lineWidth = 1.1;
         ctx.lineJoin = "round";
-        ctx.beginPath();
-        ctx.moveTo(hx - 3.4, hy + 9.6);
-        ctx.lineTo(hx - 0.4, hy + 9.6);
-        ctx.lineTo(hx - 1.9, hy + 19.5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(hx + 3.6, hy + 9.6);
-        ctx.lineTo(hx + 6.6, hy + 9.6);
-        ctx.lineTo(hx + 5.1, hy + 19.5);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        fang(hx - 3.5, hy + 9.6, 3.4, 10, -1);
+        fang(hx + 6.5, hy + 9.6, 3.4, 10, 1);
 
         ctx.restore(); // 머리 확대 해제
         ctx.restore();
